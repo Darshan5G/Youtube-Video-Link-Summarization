@@ -18,8 +18,8 @@ from langchain_groq import ChatGroq
 #     load_dotenv()
 
 # Streamlit secrets for Streamlit Cloud
-groq_api_key = st.secrets["GROQ_API_KEY"]
-langchain_api_key = st.secrets["LANGCHAIN_API_KEY"]
+groq_api_key = st.secrets["GROQ_API_KEY"]["value"]  # Correctly access the 'value' field for the API key
+langchain_api_key = st.secrets["LANGCHAIN_API_KEY"]["value"]
 
 # Function to validate the YouTube URL
 def is_valid_youtube_url(url):
