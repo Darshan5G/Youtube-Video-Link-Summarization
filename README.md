@@ -17,8 +17,9 @@ You can install the required dependencies using `pip` by running:
 
 ```bash
 pip install -r requirements.txt
+```
 
-### Setup Environment Variables
+## Setup Environment Variables
 
 To run the application, you will need to create a `.env` file in the root directory of the project. This file stores sensitive information, like API keys, in a secure way. Here's how you can set it up:
 
