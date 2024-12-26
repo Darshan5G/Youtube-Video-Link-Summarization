@@ -1,34 +1,29 @@
 import os
+import time
+import re
+import io
 from dotenv import load_dotenv
+from gtts import gTTS
 import streamlit as st
-from langchain.document_loaders import YoutubeLoader
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
-from langchain_groq import ChatGroq
+from langchain.document_loaders import YoutubeLoader
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import load_summarize_chain
 from langchain.schema import Document
-from gtts import gTTS
-import io
-from langchain_community.chat_models import ChatOllama
-import re
+from langchain_groq import ChatGroq
 
-# Load environment variables
-# load_dotenv()
-# os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
-# os.environ["LANGCHAIN_TRACING_V2"] = "true"
-# os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT")
-# os.environ['GROQ_API_KEY'] = os.getenv("GROQ_API_KEY")
-# groq_api_key = os.getenv("GROQ_API_KEY")
+# Load environment variables (ensure that .env file contains valid keys for local testing)
+# if os.path.exists('.env'):
+#     load_dotenv()
 
-
+# Streamlit secrets for Streamlit Cloud
+groq_api_key = st.secrets["GROQ_API_KEY"]
+langchain_api_key = st.secrets["LANGCHAIN_API_KEY"]
 
 # Function to validate the YouTube URL (supports both full and shortened URLs)
 def is_valid_youtube_url(url):
-    # Regex pattern to match both full and shortened YouTube URLs
     pattern = r"(https?://(?:www\.)?youtube\.com/watch\?v=[\w-]+|https?://(?:www\.)?youtu\.be/[\w-]+)"
-    
-    # Match the URL against the pattern
     return bool(re.match(pattern, url))
 
 # Function to fetch available transcript languages
@@ -42,29 +37,41 @@ def get_transcript_languages(youtube_video_url):
     except Exception as e:
         return f"Error fetching transcript languages: {e}"
 
+# Retry function to handle transient errors (503 errors)
+def retry_request(func, retries=3, delay=5):
+    for attempt in range(retries):
+        try:
+            return func()
+        except Exception as e:
+            if attempt < retries - 1:
+                print(f"Attempt {attempt+1} failed, retrying in {delay} seconds... Error: {e}")
+                time.sleep(delay)
+            else:
+                print(f"All retry attempts failed. Error: {e}")
+                raise e
+
 # Function to generate a summary from the YouTube video
 def generate_summary(url):
     try:
-        select_lang = get_transcript_languages(url)[0][:2].lower()  
+        # Get the language for the transcript (assuming it's available)
+        select_lang = get_transcript_languages(url)[0][:2].lower()
         if isinstance(select_lang, str) and select_lang.startswith('Error'):
             return None, select_lang  # Error in fetching transcript
-
+        
+        # Load the YouTube transcript using the selected language
         loader = YoutubeLoader.from_youtube_url(url, language=[select_lang], translation=select_lang)
         docs = loader.load()
 
         if not docs:
             return None, "No transcript available for this video."
 
-        transcript = docs[0].page_content
-
         # Split the transcript into chunks
+        transcript = docs[0].page_content
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=len(transcript) // 5, chunk_overlap=50)
         text_chunks = text_splitter.split_text(transcript)
-
-        # Convert text chunks into Document objects
         final_documents = [Document(page_content=chunk) for chunk in text_chunks]
 
-        # Define the map prompt template
+        # Set up the prompt template for map-reduce summarization
         chunks_prompt = """
         You are a summarization model using a map-reduce approach. 
         Task is to summarize the text provided below. 
@@ -77,7 +84,6 @@ def generate_summary(url):
         """
         map_prompt_template = PromptTemplate(input_variables=['text'], template=chunks_prompt)
 
-        # Define the final prompt template
         final_prompt = """
         You are a summarization model using the map-reduce approach. 
         Your task is to create a final summary from the text provided below. 
@@ -91,24 +97,22 @@ def generate_summary(url):
         <text>
         {text}
         <text>
-
         """
-
         final_prompt_template = PromptTemplate(input_variables=['text'], template=final_prompt)
 
-        # Initialize the LLM
-        llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=st.secrets["GROQ_API_KEY"])
+        # Initialize the LLM (Groq)
+        llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_api_key)
 
-        # Load the summarization chain
-        summary_chain = load_summarize_chain(
+        # Retry the summarization chain in case of a service disruption
+        summary_chain = retry_request(lambda: load_summarize_chain(
             llm=llm,
             chain_type="map_reduce",
             map_prompt=map_prompt_template,
             combine_prompt=final_prompt_template,
             verbose=False
-        )
+        ))
 
-        # Show the summarization chain on the final documents
+        # Run the summarization chain on the final documents
         summary = summary_chain.run(final_documents)
         return summary, select_lang
     except Exception as e:
@@ -122,7 +126,6 @@ def speak_summary(summary, language):
     audio_fp.seek(0)
     return audio_fp
 
-
 # Streamlit UI setup
 st.set_page_config(page_title="YouTube Video Summarizer", page_icon="🎥", layout="wide")
 st.title("🎬 YouTube Video Summarizer & Speaker")
@@ -134,16 +137,16 @@ url = st.text_input("Enter YouTube Video URL:", key="video_url")
 # User interaction for generating summary
 if st.button("🔍 Generate Summary"):
     if url:
-        if is_valid_youtube_url(url):  
+        if is_valid_youtube_url(url):
             with st.spinner("Generating summary... 🔄"):
                 summary, language = generate_summary(url)
                 if summary:
-                    st.session_state.summary = summary  
-                    st.session_state.language = language  
+                    st.session_state.summary = summary
+                    st.session_state.language = language
                     st.markdown("📜 **Video Summary**:")
                     st.write(summary)
                 else:
-                    st.error(f"❗ Error: {language}")  
+                    st.error(f"❗ Error: {language}")
         else:
             st.warning("❗ Please provide a valid YouTube video URL.")
     else:
@@ -152,7 +155,7 @@ if st.button("🔍 Generate Summary"):
 # Button to speak the summary
 if st.button("🔊 Speak Summary"):
     if url:
-        if 'summary' in st.session_state: 
+        if 'summary' in st.session_state:
             audio_fp = speak_summary(st.session_state.summary, st.session_state.language)
             if audio_fp:
                 st.audio(audio_fp, format="audio/mp3")
