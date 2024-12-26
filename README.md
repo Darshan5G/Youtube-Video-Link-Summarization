@@ -1,9 +1,9 @@
 
-# YouTube Video Summarizer & Speaker Tool
+# YouTube Video Link Summarizer
 
 ## Overview
 
-The **YouTube Video Summarizer & Speaker Tool** allows you to input a YouTube video URL, generate a summary of the video's content, and convert that summary into speech. This tool leverages advanced language models for summarization and uses **Google Text-to-Speech (gTTS)** for audio output. 
+The **YouTube Video Summarizer** allows you to input a YouTube video URL, generate a summary of the video's content, and convert that summary into speech. This tool leverages advanced language models for summarization and uses **Google Text-to-Speech (gTTS)** for audio output. 
 
 ## Features
 
