@@ -187,14 +187,14 @@ from langchain_community.chat_models import ChatOllama
 import re
 
 # Load environment variables
-load_dotenv()
+# load_dotenv()
 # os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
 # os.environ["LANGCHAIN_TRACING_V2"] = "true"
 # os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT")
 # os.environ['GROQ_API_KEY'] = os.getenv("GROQ_API_KEY")
 # groq_api_key = os.getenv("GROQ_API_KEY")
 
-st.secrets["GROQ_API_KEY"]
+
 
 # Function to validate the YouTube URL (supports both full and shortened URLs)
 def is_valid_youtube_url(url):
@@ -270,7 +270,7 @@ def generate_summary(url):
         final_prompt_template = PromptTemplate(input_variables=['text'], template=final_prompt)
 
         # Initialize the LLM
-        llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_api_key)
+        llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=st.secrets["GROQ_API_KEY"])
 
         # Load the summarization chain
         summary_chain = load_summarize_chain(
