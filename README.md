@@ -33,4 +33,4 @@ To run the application, you will need to create a `.env` file in the root direct
    LANGCHAIN_API_KEY=<Your_LangChain_API_Key>
    LANGCHAIN_PROJECT=<Your_LangChain_Project_Name>
    GROQ_API_KEY=<Your_GROQ_API_Key>
-   HF_TOKEN=<Your_HuggingFace_Token>  # Optional: Only needed for accessing HuggingFace models
+   ```
