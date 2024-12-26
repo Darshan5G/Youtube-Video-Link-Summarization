@@ -103,7 +103,7 @@ class YouTubeSummaryGenerator:
             final_prompt_template = PromptTemplate(input_variables=['text'], template=final_prompt)
 
             # Initialize the LLM
-            llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=self.groq_api_key)
+            llm = ChatGroq(model="mixtral-8x7b-32768", groq_api_key=self.groq_api_key)
 
             # Load the summarization chain
             summary_chain = load_summarize_chain(
