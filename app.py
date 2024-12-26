@@ -13,7 +13,7 @@ from langchain.chains import load_summarize_chain
 from langchain.schema import Document
 from langchain_groq import ChatGroq
 
-# Load environment variables (ensure that .env file contains valid keys for local testing)
+# Load environment variables for local testing (use .env file)
 # if os.path.exists('.env'):
 #     load_dotenv()
 
@@ -21,7 +21,7 @@ from langchain_groq import ChatGroq
 groq_api_key = st.secrets["GROQ_API_KEY"]
 langchain_api_key = st.secrets["LANGCHAIN_API_KEY"]
 
-# Function to validate the YouTube URL (supports both full and shortened URLs)
+# Function to validate the YouTube URL
 def is_valid_youtube_url(url):
     pattern = r"(https?://(?:www\.)?youtube\.com/watch\?v=[\w-]+|https?://(?:www\.)?youtu\.be/[\w-]+)"
     return bool(re.match(pattern, url))
@@ -100,7 +100,7 @@ def generate_summary(url):
         """
         final_prompt_template = PromptTemplate(input_variables=['text'], template=final_prompt)
 
-        # Initialize the LLM (Groq)
+        # Initialize the LLM (Groq) with the Groq API key
         llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_api_key)
 
         # Retry the summarization chain in case of a service disruption
