@@ -101,7 +101,7 @@ def generate_summary(url):
         final_prompt_template = PromptTemplate(input_variables=['text'], template=final_prompt)
 
         # Initialize the LLM (Groq) with the Groq API key
-        llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_api_key)
+        llm = ChatGroq(model="mixtral-8x7b-32768", groq_api_key=groq_api_key)
 
         # Retry the summarization chain in case of a service disruption
         summary_chain = retry_request(lambda: load_summarize_chain(
