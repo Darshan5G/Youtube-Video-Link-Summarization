@@ -1,32 +1,19 @@
+#Import All Required Libraries
 import os
-import time
-import re
-import io
 from dotenv import load_dotenv
-from gtts import gTTS
 import streamlit as st
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 from langchain.document_loaders import YoutubeLoader
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
+from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import load_summarize_chain
 from langchain.schema import Document
-from langchain_groq import ChatGroq
+from gtts import gTTS
+import io
+import re
 
-# Retry function to handle transient errors (503 errors and rate limits like 429)
-def retry_request(func, retries=3, delay=5):
-    for attempt in range(retries):  # Loop for a specified number of retries
-        try:
-            return func()  # Try to execute the function passed as an argument
-        except Exception as e:  # If an exception occurs, handle it
-            if attempt < retries - 1:  # If this is not the last attempt
-                print(f"Attempt {attempt+1} failed, retrying in {delay} seconds... Error: {e}")
-                time.sleep(delay)  # Wait for a specified delay before retrying
-            else:
-                print(f"All retry attempts failed. Error: {e}")  # If all retries fail, print the final error
-                raise e  # Raise the exception to stop execution
-
-# Create the class for YouTube video link summary generator
+#Create the class for Youtube video link summary generator
 class YouTubeSummaryGenerator:
     """
     A class to generate summary for YouTube videos and convert text summaries into speech.
@@ -63,7 +50,7 @@ class YouTubeSummaryGenerator:
 
     def generate_summary(self, url):
         """
-        Generate a summary from the YouTube video transcript in the same language.
+        Generate a summary from the YouTube video transcript in same language.
         """
         try:
             select_lang = self.get_transcript_languages(url)[0][:2].lower()
@@ -118,16 +105,16 @@ class YouTubeSummaryGenerator:
             # Initialize the LLM
             llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=self.groq_api_key)
 
-            # Retry the summarization chain in case of rate limits or service disruption
-            summary_chain = retry_request(lambda: load_summarize_chain(
+            # Load the summarization chain
+            summary_chain = load_summarize_chain(
                 llm=llm,
                 chain_type="map_reduce",
                 map_prompt=map_prompt_template,
                 combine_prompt=final_prompt_template,
                 verbose=False
-            ))
+            )
 
-            # Run the summarization chain on the final documents
+            # Show the summarization chain on the final documents
             summary = summary_chain.run(final_documents)
             return summary, select_lang
         except Exception as e:
@@ -145,7 +132,7 @@ class YouTubeSummaryGenerator:
         return audio_fp
 
 
-# Create the class for user interface using Streamlit
+#Create the class for user interface using streamlit
 class YouTubeApp:
     """
     A class to handle the Streamlit interface for YouTube video summarization and speech generation.
@@ -201,6 +188,7 @@ class YouTubeApp:
                     st.warning("❗ Please generate a summary first.")
             else:
                 st.warning("❗ Please provide a valid YouTube video URL.")
+
 
 
 if __name__ == "__main__":
