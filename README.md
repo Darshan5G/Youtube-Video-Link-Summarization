@@ -10,7 +10,6 @@ The **YouTube Video Summarizer & Speaker Tool** allows you to input a YouTube vi
 - **Summarization**: Automatically summarize YouTube videos based on their transcript.
 - **Language Support**: Select from available transcript languages to ensure summaries are in the same language as the video.
 - **Speech Output**: Convert the generated summary into speech and play it back.
-- **Easy-to-use Interface**: Input the YouTube URL and interact with a simple UI to generate summaries and audio.
 
 ### Install Dependencies
 
