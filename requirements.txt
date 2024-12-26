@@ -1,0 +1,12 @@
+langchain
+youtube-transcript-api
+langchain_groq
+python-dotenv
+langchain-community
+youtube_transcript_api
+langchain_huggingface
+gTTS
+streamlit
+transformers 
+torch
+huggingface_hub
