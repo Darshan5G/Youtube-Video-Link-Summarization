@@ -39,7 +39,10 @@ class YouTubeSummaryGenerator:
         Fetch available transcript languages for a given YouTube video URL.
         """
         try:
-            video_id = youtube_video_url.split("v=")[-1].split("&")[0] if "youtube.com" in youtube_video_url else youtube_video_url.split("/")[-1]
+            video_id_match = re.search(r"(?:v=|/)([a-zA-Z0-9_-]{11})(?=\b|/|$)", youtube_video_url)
+            if not video_id_match:
+                return "Invalid YouTube URL format."
+            video_id = video_id_match.group(1)
             languages = YouTubeTranscriptApi.list_transcripts(video_id)
             return [lang.language for lang in languages]
         except TranscriptsDisabled:
