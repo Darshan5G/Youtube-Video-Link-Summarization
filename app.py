@@ -76,7 +76,7 @@ class YouTubeSummaryGenerator:
             chunks_prompt = """
             You are a summarization model using a map-reduce approach. 
             Task is to summarize the text provided below. 
-            You do not change the language of the text. 
+            Do not change the language of the text. 
             Focus only on creating a clear and concise summary while maintaining the original meaning.
             <text>
             {text}
@@ -88,7 +88,7 @@ class YouTubeSummaryGenerator:
             # Define the final prompt template
             final_prompt = """
             You are a summarization model using the map-reduce approach. 
-            Your task is to create a final summary from the text provided below. 
+            Task is to create a final summary from the text provided below. 
 
             Make sure the summary:
             - Is clear and easy to understand.
@@ -151,7 +151,7 @@ class YouTubeApp:
         """
 
         # Streamlit UI setup
-        st.set_page_config(page_title="YouTube Video Summarizer", page_icon="🎥", layout="wide")
+        st.set_page_config(page_title="YouTube Video Link Summarizer", page_icon="🎥", layout="wide")
         st.title("🎬 YouTube Video Summarizer")
 
         # Input the YouTube URL
