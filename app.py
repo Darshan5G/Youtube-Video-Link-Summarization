@@ -13,7 +13,7 @@ from gtts import gTTS
 import io
 from langchain_community.chat_models import ChatOllama
 
-# Load environment variables
+# Load environment variables (not needed on Streamlit Cloud if using secrets)
 # load_dotenv()
 # os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
 # os.environ["LANGCHAIN_TRACING_V2"] = "true"
@@ -24,11 +24,10 @@ from langchain_community.chat_models import ChatOllama
 groq_api_key = st.secrets["GROQ_API_KEY"]["value"]  
 langchain_api_key = st.secrets["LANGCHAIN_API_KEY"]["value"]
 
-#Function to Validate the YouTube URL.
+# Function to Validate the YouTube URL.
 def is_valid_youtube_url(url):
     pattern = r"(https?://(?:www\.)?youtube\.com/watch\?v=[\w-]+|https?://(?:www\.)?youtu\.be/[\w-]+)"
     return bool(re.match(pattern, url))
-
 
 # Function to get transcript languages
 def get_transcript_languages(youtube_video_url):
@@ -44,7 +43,6 @@ def get_transcript_languages(youtube_video_url):
     except Exception as e:
         return f"Error fetching transcript languages: {e}"
 
-
 # Function to select the auto-generated language
 def select_auto_generated_language(url):
     try:
@@ -59,26 +57,16 @@ def select_auto_generated_language(url):
     except Exception as e:
         return f"Error: {e}"
 
-
 # Function to generate a summary from the YouTube video
 def generate_summary(url):
     select_lang = select_auto_generated_language(url)[:2]
 
-    # st.write(f"Selected Language: {select_lang}")
-
+    # Load YouTube video using language selection
     loader = YoutubeLoader.from_youtube_url(url, language=[select_lang], translation=select_lang)
     docs = loader.load()
 
-     # Extract transcript and metadata
+    # Extract transcript and metadata
     transcript = docs[0].page_content
-
-   
-    # st.write("Transcript:")
-    # st.text_area("Transcript", transcript, height=300)
-
-    # for key, value in docs[0].metadata.items():
-    #     st.write(f"{key}: {value}")
-
 
     # Split the transcript into chunks
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=len(transcript) // 5, chunk_overlap=50)
@@ -110,8 +98,6 @@ def generate_summary(url):
 
     # Initialize the LLM
     llm = ChatGroq(model="distil-whisper-large-v3-en", groq_api_key=groq_api_key)
-    
-    # llm = ChatOllama(model='llama3.2')  
 
     # Load the summarization chain
     summary_chain = load_summarize_chain(
@@ -126,16 +112,19 @@ def generate_summary(url):
     summary = summary_chain.run(final_documents)
     return summary, select_lang
 
-
 # Function to convert text summary into speech
 def speak_summary(summary, language):
+    # Check if the language is supported by gTTS
+    supported_langs = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh']
+    if language not in supported_langs:
+        language = 'en'  # Default to English if not supported
+    
     myobj = gTTS(text=summary, lang=language, slow=False)
     audio_fp = io.BytesIO()
     myobj.write_to_fp(audio_fp)
     audio_fp.seek(0)
 
     return audio_fp
-
 
 # Streamlit UI setup
 st.set_page_config(page_title="YouTube Video Link Summarizer", page_icon="🎥", layout="wide")
