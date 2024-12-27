@@ -152,7 +152,7 @@ class YouTubeApp:
 
         # Streamlit UI setup
         st.set_page_config(page_title="YouTube Video Link Summarizer", page_icon="🎥", layout="wide")
-        st.title("🎬 YouTube Video Summarizer")
+        st.title("🎬 YouTube Video Link Summarizer")
 
         # Input the YouTube URL
         url = st.text_input("Enter YouTube Video URL:", key="video_url")
