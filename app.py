@@ -11,24 +11,17 @@ from langchain.chains import load_summarize_chain
 from langchain.schema import Document
 from gtts import gTTS
 import io
-from langchain_community.chat_models import ChatOllama
+from time import sleep
 
 # Load environment variables
-# load_dotenv()
-# os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
-# os.environ["LANGCHAIN_TRACING_V2"] = "true"
-# os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT")
-# os.environ['GROQ_API_KEY'] = os.getenv("GROQ_API_KEY")
-# groq_api_key = os.getenv("GROQ_API_KEY")
-
-groq_api_key = st.secrets["GROQ_API_KEY"]["value"]  
+load_dotenv()
+groq_api_key = st.secrets["GROQ_API_KEY"]["value"]
 langchain_api_key = st.secrets["LANGCHAIN_API_KEY"]["value"]
 
-#Function to Validate the YouTube URL.
+# Function to validate the YouTube URL
 def is_valid_youtube_url(url):
     pattern = r"(https?://(?:www\.)?youtube\.com/watch\?v=[\w-]+|https?://(?:www\.)?youtu\.be/[\w-]+)"
     return bool(re.match(pattern, url))
-
 
 # Function to get transcript languages
 def get_transcript_languages(youtube_video_url):
@@ -44,7 +37,6 @@ def get_transcript_languages(youtube_video_url):
     except Exception as e:
         return f"Error fetching transcript languages: {e}"
 
-
 # Function to select the auto-generated language
 def select_auto_generated_language(url):
     try:
@@ -59,73 +51,74 @@ def select_auto_generated_language(url):
     except Exception as e:
         return f"Error: {e}"
 
-
 # Function to generate a summary from the YouTube video
-def generate_summary(url):
-    select_lang = select_auto_generated_language(url)[:2]
-
-    # st.write(f"Selected Language: {select_lang}")
-
-    loader = YoutubeLoader.from_youtube_url(url, language=[select_lang], translation=select_lang)
-    docs = loader.load()
-
-     # Extract transcript and metadata
-    transcript = docs[0].page_content
-
-   
-    # st.write("Transcript:")
-    # st.text_area("Transcript", transcript, height=300)
-
-    # for key, value in docs[0].metadata.items():
-    #     st.write(f"{key}: {value}")
-
-
-    # Split the transcript into chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=len(transcript) // 5, chunk_overlap=50)
-    text_chunks = text_splitter.split_text(transcript)
-
-    # Convert text chunks into Document objects
-    final_documents = [Document(page_content=chunk) for chunk in text_chunks]
-
-    # Define the map prompt template
-    chunks_prompt = """
-    Please summarize the text based on the input text, language is not changed.
-    <text>
-    {text}
-    <text>
-    Summary:
+def generate_summary_with_retry(url, retries=3, delay=5):
     """
-    map_prompt_template = PromptTemplate(input_variables=['text'], template=chunks_prompt)
-
-    # Define the final prompt template
-    final_prompt = """
-    Make sure the summary is clear, easy to understand, and leaves out extra details.
-    Focus on the main ideas.
-    Final summary in 10 to 300 words based on video length and characters <length> and it is not written in output. Language is not changed
-    <text>
-    {text}
-    <text>
+    Attempt to generate a summary from a YouTube video URL with retry logic in case of rate limits.
     """
-    final_prompt_template = PromptTemplate(input_variables=['text'], template=final_prompt)
+    for _ in range(retries):
+        try:
+            select_lang = select_auto_generated_language(url)[:2]
+            loader = YoutubeLoader.from_youtube_url(url, language=[select_lang], translation=select_lang)
+            docs = loader.load()
 
-    # Initialize the LLM
-    llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_api_key)
+            # Extract transcript and metadata
+            transcript = docs[0].page_content
+
+            # Split the transcript into chunks
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=len(transcript) // 5, chunk_overlap=50)
+            text_chunks = text_splitter.split_text(transcript)
+
+            # Convert text chunks into Document objects
+            final_documents = [Document(page_content=chunk) for chunk in text_chunks]
+
+            # Define the map prompt template
+            chunks_prompt = """
+            Please summarize the text based on the input text, language is not changed.
+            <text>
+            {text}
+            <text>
+            Summary:
+            """
+            map_prompt_template = PromptTemplate(input_variables=['text'], template=chunks_prompt)
+
+            # Define the final prompt template
+            final_prompt = """
+            Make sure the summary is clear, easy to understand, and leaves out extra details.
+            Focus on the main ideas.
+            Final summary in 10 to 300 words based on video length and characters <length> and it is not written in output. Language is not changed
+            <text>
+            {text}
+            <text>
+            """
+            final_prompt_template = PromptTemplate(input_variables=['text'], template=final_prompt)
+
+            # Initialize the LLM
+            llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_api_key)
+
+            # Load the summarization chain
+            summary_chain = load_summarize_chain(
+                llm=llm,
+                chain_type="map_reduce",
+                map_prompt=map_prompt_template,
+                combine_prompt=final_prompt_template,
+                verbose=False
+            )
+
+            # Show the summarization chain on the final documents
+            summary = summary_chain.run(final_documents)
+            return summary, select_lang
+        
+        except groq.RateLimitError:
+            # Retry logic in case of rate-limiting error
+            st.error("❗ API rate limit reached. Retrying in a few seconds...")
+            sleep(delay)  # Wait before retrying
+        except Exception as e:
+            return None, f"Error generating summary: {e}"
     
-    # llm = ChatOllama(model='llama3.2')  
-
-    # Load the summarization chain
-    summary_chain = load_summarize_chain(
-        llm=llm,
-        chain_type="map_reduce",
-        map_prompt=map_prompt_template,
-        combine_prompt=final_prompt_template,
-        verbose=False
-    )
-
-    # Show the summarization chain on the final documents
-    summary = summary_chain.run(final_documents)
-    return summary, select_lang
-
+    # If retries exceed, notify the user
+    st.error("❗ API rate limit exceeded. Please try again later.")
+    return None, "Rate limit exceeded"
 
 # Function to convert text summary into speech
 def speak_summary(summary, language):
@@ -135,7 +128,6 @@ def speak_summary(summary, language):
     audio_fp.seek(0)
 
     return audio_fp
-
 
 # Streamlit UI setup
 st.set_page_config(page_title="YouTube Video Link Summarizer", page_icon="🎥", layout="wide")
@@ -149,11 +141,11 @@ if st.button("🔍 Generate Summary"):
     if url:
         if is_valid_youtube_url(url):
             with st.spinner("Generating summary... 🔄"):
-                summary, language = generate_summary(url)
+                summary, language = generate_summary_with_retry(url)
                 if summary:
                     st.session_state.summary = summary
                     st.session_state.language = language
-                    st.markdown("📜 **Video Summary**:")
+                    st.markdown("📜 **Video Summary**: ")
                     st.write(summary)
                 else:
                     st.error(f"❗ Error: {language}")
