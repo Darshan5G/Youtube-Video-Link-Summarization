@@ -56,7 +56,7 @@ class YouTubeSummaryGenerator:
         Generate a summary from the YouTube video transcript in same language.
         """
         try:
-            select_lang = self.get_transcript_languages(url)[0][:2].lower()
+            select_lang = self.get_transcript_languages(url)[1][:2].lower()
             if isinstance(select_lang, str) and select_lang.startswith('Error'):
                 return None, select_lang  
 
