@@ -15,14 +15,14 @@ from langchain_community.chat_models import ChatOllama
 
 # Load environment variables
 load_dotenv()
-os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT")
-os.environ['GROQ_API_KEY'] = os.getenv("GROQ_API_KEY")
-groq_api_key = os.getenv("GROQ_API_KEY")
+# os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
+# os.environ["LANGCHAIN_TRACING_V2"] = "true"
+# os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT")
+# os.environ['GROQ_API_KEY'] = os.getenv("GROQ_API_KEY")
+# groq_api_key = os.getenv("GROQ_API_KEY")
 
-# groq_api_key = st.secrets["GROQ_API_KEY"]["value"]  
-# langchain_api_key = st.secrets["LANGCHAIN_API_KEY"]["value"]
+groq_api_key = st.secrets["GROQ_API_KEY"]["value"]  
+langchain_api_key = st.secrets["LANGCHAIN_API_KEY"]["value"]
 
 #Function to Validate the YouTube URL.
 def is_valid_youtube_url(url):
